@@ -1,269 +1,181 @@
 import React, { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { 
-  Container, 
-  Typography, 
-  Box, 
-  Paper, 
-  Grid,
-  CircularProgress,
-  Alert,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
-  Divider,
-  Collapse,
-  IconButton,
-  LinearProgress
-} from '@mui/material';
-import Plot from 'react-plotly.js';
-import axios from 'axios';
+import { Box, Container, Typography, Paper, Grid, CircularProgress, Alert, Select, MenuItem, FormControl, InputLabel, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Divider } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import Plot from 'react-plotly.js';
+import FileUpload from './components/FileUpload';
 
 function App() {
-  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [failedFiles, setFailedFiles] = useState([]);
-  const [expandedError, setExpandedError] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState('');
+  const [data, setData] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [expandedInsight, setExpandedInsight] = useState('panel1');
 
-  const onDrop = async (acceptedFiles) => {
-    if (!acceptedFiles.length) return;
-
+  const handleFileUpload = async (files) => {
     setLoading(true);
     setError(null);
-    setFailedFiles([]);
-    setExpandedError(false);
-    setProcessingStatus('Starting file processing...');
-
+    
     const formData = new FormData();
-    acceptedFiles.forEach(file => {
-      formData.append('files', file);
-    });
+    files.forEach(file => formData.append('files', file));
 
     try {
-      const response = await axios.post('http://localhost:5000/api/upload', formData);
-      setData(response.data);
-      setUploadedFiles(response.data.processed_files || []);
-      setFailedFiles(response.data.failed_files || []);
-      setProcessingStatus('');
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to process files');
+      }
+
+      setData(result);
+      if (result.category_data.length > 0) {
+        setSelectedCategory(result.category_data[0].Category);
+      }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Unable to process the files. Please try again.';
-      setError(errorMessage);
-      setFailedFiles(err.response?.data?.failed_files || []);
-      setProcessingStatus('');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/pdf': ['.pdf']
-    },
-    multiple: true
-  });
+  const handleInsightChange = (panel) => (event, isExpanded) => {
+    setExpandedInsight(isExpanded ? panel : false);
+  };
+
+  const renderVisualizations = () => {
+    if (!data) return null;
+
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Plot
+              data={JSON.parse(data.category_plot).data}
+              layout={JSON.parse(data.category_plot).layout}
+              style={{ width: '100%', height: '400px' }}
+            />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Plot
+              data={JSON.parse(data.monthly_plot).data}
+              layout={JSON.parse(data.monthly_plot).layout}
+              style={{ width: '100%', height: '400px' }}
+            />
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Financial Insights & Recommendations
+            </Typography>
+            <Accordion expanded={expandedInsight === 'panel1'} onChange={handleInsightChange('panel1')}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>High-Ticket Spending Analysis</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <List>
+                  {data.insights.high_ticket_items.map((item, index) => (
+                    <ListItem key={index}>
+                      <ListItemText
+                        primary={`${item.Description} (${item.Category})`}
+                        secondary={`$${Math.abs(item.Amount).toFixed(2)} on ${new Date(item.Date).toLocaleDateString()}`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </AccordionDetails>
+            </Accordion>
+
+            <Accordion expanded={expandedInsight === 'panel2'} onChange={handleInsightChange('panel2')}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>AI-Powered Financial Insights</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography variant="body1" style={{ whiteSpace: 'pre-line' }}>
+                  {data.insights.insights}
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
+
+            <Accordion expanded={expandedInsight === 'panel3'} onChange={handleInsightChange('panel3')}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Category Details</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Select Category</InputLabel>
+                  <Select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    label="Select Category"
+                  >
+                    {data.category_data.map((category) => (
+                      <MenuItem key={category.Category} value={category.Category}>
+                        {category.Category} (${category.Amount.toFixed(2)})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {selectedCategory && data.transactions_by_category[selectedCategory] && (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Transactions for {selectedCategory}
+                    </Typography>
+                    <List>
+                      {data.transactions_by_category[selectedCategory].map((transaction, index) => (
+                        <React.Fragment key={index}>
+                          <ListItem>
+                            <ListItemText
+                              primary={transaction.Description}
+                              secondary={`$${Math.abs(transaction.Amount).toFixed(2)} on ${new Date(transaction.Date).toLocaleDateString()}`}
+                            />
+                          </ListItem>
+                          {index < data.transactions_by_category[selectedCategory].length - 1 && <Divider />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          </Paper>
+        </Grid>
+      </Grid>
+    );
+  };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom align="center">
+        More Life - Financial Literacy Tool
+      </Typography>
+      <Typography variant="subtitle1" gutterBottom align="center" color="text.secondary">
+        Less Stress, More Life - Empowering Young Adults with Financial Knowledge
+      </Typography>
+
       <Box sx={{ my: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-          More Life
-        </Typography>
-        <Typography variant="h5" component="h2" gutterBottom align="center" color="text.secondary">
-          Less Stress, More Life
-        </Typography>
-
-        <Paper
-          {...getRootProps()}
-          sx={{
-            p: 3,
-            mt: 4,
-            textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-            border: '2px dashed',
-            borderColor: isDragActive ? 'primary.main' : 'grey.300',
-          }}
-        >
-          <input {...getInputProps()} />
-          <Typography>
-            {isDragActive
-              ? 'Drop the files here'
-              : 'Drag and drop your bank statements here, or click to select'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Supported formats: PDF, CSV, Excel
-          </Typography>
-        </Paper>
-
-        {loading && (
-          <Box sx={{ mt: 2 }}>
-            <LinearProgress />
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-              {processingStatus}
-            </Typography>
-          </Box>
-        )}
-
-        {(uploadedFiles.length > 0 || failedFiles.length > 0) && (
-          <Paper sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              File Processing Status
-            </Typography>
-            
-            {uploadedFiles.length > 0 && (
-              <>
-                <Typography variant="subtitle1" color="success.main" gutterBottom>
-                  Successfully Processed Files
-                </Typography>
-                <List>
-                  {uploadedFiles.map((file, index) => (
-                    <ListItem key={index}>
-                      <ListItemText primary={file} />
-                      <Chip label="Processed" color="success" size="small" />
-                    </ListItem>
-                  ))}
-                </List>
-                <Divider sx={{ my: 2 }} />
-              </>
-            )}
-
-            {failedFiles.length > 0 && (
-              <>
-                <Typography variant="subtitle1" color="error.main" gutterBottom>
-                  Files That Need Attention
-                </Typography>
-                <List>
-                  {failedFiles.map((file, index) => (
-                    <ListItem key={index}>
-                      <ListItemText 
-                        primary={file.filename}
-                        secondary={file.error}
-                      />
-                      <Chip label="Needs Attention" color="error" size="small" />
-                    </ListItem>
-                  ))}
-                </List>
-              </>
-            )}
-          </Paper>
-        )}
-
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ mt: 2 }}
-            action={
-              <IconButton
-                aria-label="expand"
-                size="small"
-                onClick={() => setExpandedError(!expandedError)}
-              >
-                {expandedError ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </IconButton>
-            }
-          >
-            {error}
-            <Collapse in={expandedError} timeout="auto" unmountOnExit>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Tips for uploading bank statements:
-                </Typography>
-                <ul>
-                  <li>Try downloading a fresh copy of your statement from your bank's website</li>
-                  <li>Make sure the statement includes transaction dates, descriptions, and amounts</li>
-                  <li>If using a PDF, ensure it's not password-protected</li>
-                  <li>Check that the file is not corrupted or empty</li>
-                  <li>Try converting the file to CSV format if available</li>
-                </ul>
-              </Box>
-            </Collapse>
-          </Alert>
-        )}
-
-        {data && (
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Income vs Expenses
-                </Typography>
-                <Plot
-                  data={JSON.parse(data.income_expense_plot).data}
-                  layout={{
-                    ...JSON.parse(data.income_expense_plot).layout,
-                    height: 400,
-                    showlegend: true,
-                  }}
-                />
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Expenses by Category
-                </Typography>
-                <Plot
-                  data={JSON.parse(data.category_plot).data}
-                  layout={{
-                    ...JSON.parse(data.category_plot).layout,
-                    height: 400,
-                  }}
-                />
-              </Paper>
-            </Grid>
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Monthly Net Income/Expenses
-                </Typography>
-                <Plot
-                  data={JSON.parse(data.monthly_plot).data}
-                  layout={{
-                    ...JSON.parse(data.monthly_plot).layout,
-                    height: 400,
-                    xaxis: { title: 'Month' },
-                    yaxis: { title: 'Net Amount ($)' }
-                  }}
-                />
-              </Paper>
-            </Grid>
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Summary
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body1">
-                      Total Income: ${data.income_expense.income.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body1">
-                      Total Expenses: ${data.income_expense.expenses.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body1" color={data.income_expense.income - data.income_expense.expenses >= 0 ? 'success.main' : 'error.main'}>
-                      Net Balance: ${(data.income_expense.income - data.income_expense.expenses).toFixed(2)}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
-          </Grid>
-        )}
+        <FileUpload onUpload={handleFileUpload} />
       </Box>
+
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {renderVisualizations()}
     </Container>
   );
 }

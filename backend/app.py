@@ -164,7 +164,7 @@ def get_ai_categorization(description: str, amount: float) -> str:
         Return only the category name, nothing else."""
 
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a financial transaction categorizer. Respond with only the category name."},
                 {"role": "user", "content": prompt}
@@ -177,6 +177,66 @@ def get_ai_categorization(description: str, amount: float) -> str:
     except Exception as e:
         logger.error(f"Error in AI categorization: {str(e)}")
         return "Other"
+
+def get_spending_insights(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Generate AI-powered insights about spending patterns."""
+    try:
+        # Calculate high-ticket items (transactions above $500, excluding income)
+        high_ticket_items = [t for t in transactions if abs(t['Amount']) > 500 and t['Category'] != 'Income']
+        
+        # Calculate monthly spending by category
+        monthly_spending = {}
+        for transaction in transactions:
+            month = transaction['Date'].strftime('%Y-%m')
+            category = transaction['Category']
+            if month not in monthly_spending:
+                monthly_spending[month] = {}
+            if category not in monthly_spending[month]:
+                monthly_spending[month][category] = 0
+            monthly_spending[month][category] += abs(transaction['Amount'])
+        
+        # Generate insights using AI
+        prompt = f"""Analyze these financial transactions and provide insights for a young adult in their twenties:
+
+        High-ticket expenses (over $500):
+        {[f"- ${abs(t['Amount'])}: {t['Description']} ({t['Category']})" for t in high_ticket_items]}
+
+        Monthly spending by category:
+        {json.dumps(monthly_spending, indent=2)}
+
+        Provide insights in this format:
+        1. High-ticket spending patterns
+        2. Areas of potential overspending
+        3. Money management recommendations
+        4. Savings opportunities
+        5. Financial literacy tips
+
+        Focus on practical advice for young adults."""
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a financial advisor specializing in young adult financial literacy."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        insights = response.choices[0].message.content.strip()
+        
+        return {
+            'high_ticket_items': high_ticket_items,
+            'monthly_spending': monthly_spending,
+            'insights': insights
+        }
+    except Exception as e:
+        logger.error(f"Error generating insights: {str(e)}")
+        return {
+            'high_ticket_items': [],
+            'monthly_spending': {},
+            'insights': "Unable to generate insights at this time."
+        }
 
 def process_file(filepath: str) -> pd.DataFrame:
     try:
@@ -331,39 +391,40 @@ def upload_files():
     # Combine all dataframes
     combined_df = pd.concat(all_data, ignore_index=True)
     
-    # Generate visualizations
-    income_expense_data = {
-        'income': float(combined_df[combined_df['Amount'] > 0]['Amount'].sum()),
-        'expenses': float(abs(combined_df[combined_df['Amount'] < 0]['Amount'].sum()))
-    }
-    
     # Category breakdown
     category_data = combined_df[combined_df['Amount'] < 0].groupby('Category')['Amount'].sum().reset_index()
     category_data['Amount'] = category_data['Amount'].abs()
     
-    # Monthly trend
+    # Monthly trend - fixed calculation
     monthly_data = combined_df.groupby(combined_df['Date'].dt.to_period('M')).agg({
         'Amount': lambda x: x[x > 0].sum() - abs(x[x < 0].sum())
     }).reset_index()
     monthly_data['Date'] = monthly_data['Date'].astype(str)
     
     # Create visualizations
-    fig_income_expense = go.Figure(data=[
-        go.Bar(name='Income', x=['Income'], y=[income_expense_data['income']], marker_color='green'),
-        go.Bar(name='Expenses', x=['Expenses'], y=[income_expense_data['expenses']], marker_color='red')
-    ])
-    
     fig_categories = px.pie(category_data, values='Amount', names='Category', title='Expenses by Category')
     
     fig_monthly = px.line(monthly_data, x='Date', y='Amount', title='Monthly Net Income/Expenses')
     
+    # Get detailed transaction data by category
+    transactions_by_category = {}
+    for category in category_data['Category'].unique():
+        category_transactions = combined_df[
+            (combined_df['Category'] == category) & 
+            (combined_df['Amount'] < 0)
+        ].sort_values('Date', ascending=False)
+        transactions_by_category[category] = category_transactions.to_dict('records')
+    
+    # Generate spending insights
+    insights_data = get_spending_insights(combined_df.to_dict('records'))
+    
     return jsonify({
-        'income_expense': income_expense_data,
         'category_data': category_data.to_dict('records'),
         'monthly_data': monthly_data.to_dict('records'),
-        'income_expense_plot': fig_income_expense.to_json(),
         'category_plot': fig_categories.to_json(),
         'monthly_plot': fig_monthly.to_json(),
+        'transactions_by_category': transactions_by_category,
+        'insights': insights_data,
         'processed_files': processed_files,
         'failed_files': failed_files
     })
