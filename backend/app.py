@@ -196,7 +196,7 @@ def get_spending_insights(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
             monthly_spending[month][category] += abs(transaction['Amount'])
         
         # Generate insights using AI
-        prompt = f"""Analyze these financial transactions and provide insights for a young adult in their twenties:
+        prompt = f"""Analyze these financial transactions and provide concise insights for a young adult in their twenties:
 
         High-ticket expenses (over $500):
         {[f"- ${abs(t['Amount'])}: {t['Description']} ({t['Category']})" for t in high_ticket_items]}
@@ -204,23 +204,28 @@ def get_spending_insights(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
         Monthly spending by category:
         {json.dumps(monthly_spending, indent=2)}
 
-        Provide insights in this format:
-        1. High-ticket spending patterns
-        2. Areas of potential overspending
-        3. Money management recommendations
-        4. Savings opportunities
-        5. Financial literacy tips
+        Provide a brief analysis in this format:
+        ### Spending Overview
+        [2-3 sentences about overall spending patterns]
 
-        Focus on practical advice for young adults."""
+        ### Key Areas
+        - Top spending category and amount
+        - Notable high-ticket expenses
+        - Potential savings opportunities
+
+        ### Quick Tips
+        [2-3 actionable financial tips]
+
+        Keep the response concise and focused on practical advice."""
 
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a financial advisor specializing in young adult financial literacy."},
+                {"role": "system", "content": "You are a financial advisor specializing in young adult financial literacy. Provide concise, actionable insights."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=500
+            max_tokens=300
         )
         
         insights = response.choices[0].message.content.strip()
@@ -395,16 +400,8 @@ def upload_files():
     category_data = combined_df[combined_df['Amount'] < 0].groupby('Category')['Amount'].sum().reset_index()
     category_data['Amount'] = category_data['Amount'].abs()
     
-    # Monthly trend - fixed calculation
-    monthly_data = combined_df.groupby(combined_df['Date'].dt.to_period('M')).agg({
-        'Amount': lambda x: x[x > 0].sum() - abs(x[x < 0].sum())
-    }).reset_index()
-    monthly_data['Date'] = monthly_data['Date'].astype(str)
-    
     # Create visualizations
     fig_categories = px.pie(category_data, values='Amount', names='Category', title='Expenses by Category')
-    
-    fig_monthly = px.line(monthly_data, x='Date', y='Amount', title='Monthly Net Income/Expenses')
     
     # Get detailed transaction data by category
     transactions_by_category = {}
@@ -420,14 +417,132 @@ def upload_files():
     
     return jsonify({
         'category_data': category_data.to_dict('records'),
-        'monthly_data': monthly_data.to_dict('records'),
         'category_plot': fig_categories.to_json(),
-        'monthly_plot': fig_monthly.to_json(),
         'transactions_by_category': transactions_by_category,
         'insights': insights_data,
         'processed_files': processed_files,
         'failed_files': failed_files
     })
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        message = data.get('message')
+        context = data.get('context')
+        
+        if not message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        prompt = f"""You are a financial advisor specializing in young adult financial literacy. 
+        Use the following financial insights as context for your response:
+
+        {context}
+
+        User question: {message}
+
+        Provide a concise, practical response focused on financial advice for young adults."""
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a financial advisor specializing in young adult financial literacy. Provide concise, actionable advice."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+        
+        return jsonify({
+            'response': response.choices[0].message.content.strip()
+        })
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to process chat message'}), 500
+
+@app.route('/api/analyze-goals', methods=['POST'])
+def analyze_goals():
+    try:
+        data = request.json
+        monthly_income = data.get('monthlyIncome')
+        budget_goals = data.get('budgetGoals', {})
+        custom_goals = data.get('customGoals', [])
+        actual_spending = data.get('actualSpending')
+
+        # Prepare analysis context
+        analysis_context = {
+            "monthly_income": monthly_income,
+            "budget_goals": budget_goals,
+            "custom_goals": custom_goals
+        }
+
+        if actual_spending:
+            analysis_context["actual_spending"] = {
+                "categories": actual_spending["categoryData"],
+                "monthly_trend": actual_spending["monthlyData"],
+                "current_insights": actual_spending["insights"]
+            }
+
+        # Generate AI analysis and recommendations
+        prompt = f"""As a financial advisor, analyze this person's financial goals and provide personalized recommendations:
+
+Monthly Income: ${monthly_income}
+
+Desired Budget Allocation:
+{json.dumps(budget_goals, indent=2)}
+
+Personal Financial Goals:
+{json.dumps(custom_goals, indent=2)}
+
+{f'''
+Current Spending Patterns:
+{json.dumps(actual_spending, indent=2)}
+''' if actual_spending else 'No current spending data available.'}
+
+Provide analysis in this format:
+1. Budget Analysis
+   - Compare desired allocation with recommended percentages
+   - If actual spending data exists, compare with current habits
+   - Identify potential issues or unrealistic goals
+
+2. Custom Goals Assessment
+   - Evaluate feasibility of personal financial goals
+   - Suggest timeline adjustments if needed
+   - Recommend specific saving strategies
+
+3. Action Items
+   - List 3-5 specific, actionable steps
+   - Include both immediate actions and long-term strategies
+   - If actual spending data exists, focus on areas needing most improvement
+
+Keep the response practical and focused on achievable improvements."""
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a financial advisor specializing in personal finance and budgeting for young adults. Provide practical, actionable advice."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+
+        recommendations = response.choices[0].message.content.strip()
+
+        return jsonify({
+            'recommendations': recommendations,
+            'analysis': {
+                'monthly_income': monthly_income,
+                'budget_goals': budget_goals,
+                'custom_goals': custom_goals,
+                'has_actual_data': bool(actual_spending)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error analyzing goals: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': 'Failed to analyze goals'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

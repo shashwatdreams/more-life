@@ -1,45 +1,19 @@
 import React, { useState } from 'react';
-import { Box, Container, Typography, Paper, Grid, CircularProgress, Alert, Select, MenuItem, FormControl, InputLabel, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, CircularProgress, Alert, Select, MenuItem, FormControl, InputLabel, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Divider, Tabs, Tab, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Plot from 'react-plotly.js';
 import FileUpload from './components/FileUpload';
+import FinancialChat from './components/FinancialChat';
+import FinancialGoals from './components/FinancialGoals';
+import ReactMarkdown from 'react-markdown';
 
 function App() {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [expandedInsight, setExpandedInsight] = useState('panel1');
-
-  const handleFileUpload = async (files) => {
-    setLoading(true);
-    setError(null);
-    
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-
-    try {
-      const response = await fetch('http://localhost:5000/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to process files');
-      }
-
-      setData(result);
-      if (result.category_data.length > 0) {
-        setSelectedCategory(result.category_data[0].Category);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showGoals, setShowGoals] = useState(false);
 
   const handleInsightChange = (panel) => (event, isExpanded) => {
     setExpandedInsight(isExpanded ? panel : false);
@@ -50,20 +24,11 @@ function App() {
 
     return (
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Plot
               data={JSON.parse(data.category_plot).data}
               layout={JSON.parse(data.category_plot).layout}
-              style={{ width: '100%', height: '400px' }}
-            />
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Plot
-              data={JSON.parse(data.monthly_plot).data}
-              layout={JSON.parse(data.monthly_plot).layout}
               style={{ width: '100%', height: '400px' }}
             />
           </Paper>
@@ -96,13 +61,22 @@ function App() {
                 <Typography>AI-Powered Financial Insights</Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography variant="body1" style={{ whiteSpace: 'pre-line' }}>
-                  {data.insights.insights}
-                </Typography>
+                {renderInsights(data.insights.insights)}
               </AccordionDetails>
             </Accordion>
 
             <Accordion expanded={expandedInsight === 'panel3'} onChange={handleInsightChange('panel3')}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>Chat with AI Financial Advisor</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ height: '500px' }}>
+                  <FinancialChat insights={data.insights.insights} />
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
+            <Accordion expanded={expandedInsight === 'panel4'} onChange={handleInsightChange('panel4')}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography>Category Details</Typography>
               </AccordionSummary>
@@ -144,38 +118,76 @@ function App() {
                 )}
               </AccordionDetails>
             </Accordion>
+
+            {!showGoals && (
+              <Box sx={{ mt: 3, textAlign: 'center' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  onClick={() => setShowGoals(true)}
+                >
+                  Set Your Financial Goals
+                </Button>
+              </Box>
+            )}
           </Paper>
         </Grid>
+
+        {showGoals && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2 }}>
+              <FinancialGoals uploadedData={data} />
+            </Paper>
+          </Grid>
+        )}
       </Grid>
     );
   };
 
+  const renderInsights = (insights) => {
+    if (!insights) return null;
+    return <ReactMarkdown>{insights}</ReactMarkdown>;
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center">
-        More Life - Financial Literacy Tool
-      </Typography>
-      <Typography variant="subtitle1" gutterBottom align="center" color="text.secondary">
-        Less Stress, More Life - Empowering Young Adults with Financial Knowledge
-      </Typography>
-
+    <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
-        <FileUpload onUpload={handleFileUpload} />
+        <Typography variant="h3" component="h1" gutterBottom align="center">
+          More Life
+        </Typography>
+        <Typography variant="h5" component="h2" gutterBottom align="center" color="text.secondary">
+          Your Personal Financial Advisor
+        </Typography>
+
+        <FileUpload
+          onUploadStart={() => setLoading(true)}
+          onUploadSuccess={(data) => {
+            setData(data);
+            setLoading(false);
+            setError(null);
+            setShowGoals(false); // Reset goals when new data is uploaded
+          }}
+          onUploadError={(error) => {
+            setError(error);
+            setLoading(false);
+          }}
+        />
+
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {error && (
+          <Alert severity="error" sx={{ my: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {data && renderVisualizations()}
       </Box>
-
-      {loading && (
-        <Box display="flex" justifyContent="center" my={4}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ my: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {renderVisualizations()}
     </Container>
   );
 }
