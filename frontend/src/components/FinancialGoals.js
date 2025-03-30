@@ -267,6 +267,35 @@ const FinancialGoals = ({ uploadedData }) => {
             Your Personalized Financial Analysis
           </Typography>
           
+          {uploadedData?.insights?.high_ticket_items?.length > 0 && (
+            <>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+                High-Ticket Spending Analysis
+              </Typography>
+              <List>
+                {uploadedData.insights.high_ticket_items.map((item, index) => (
+                  <React.Fragment key={index}>
+                    <ListItem>
+                      <ListItemText
+                        primary={item.Description}
+                        secondary={
+                          <>
+                            Amount: ${item.Amount.toFixed(2)}
+                            <br />
+                            Category: {item.Category}
+                            <br />
+                            Date: {item.Date}
+                          </>
+                        }
+                      />
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            </>
+          )}
+
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
             Current vs. Desired Spending
           </Typography>

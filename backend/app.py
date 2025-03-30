@@ -182,24 +182,35 @@ def get_spending_insights(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Generate AI-powered insights about spending patterns."""
     try:
         # Calculate high-ticket items (transactions above $500, excluding income)
-        high_ticket_items = [t for t in transactions if abs(t['Amount']) > 500 and t['Category'] != 'Income']
+        high_ticket_items = []
+        for transaction in transactions:
+            if transaction.get('Amount') and abs(transaction['Amount']) > 500 and transaction.get('Category') != 'Income':
+                high_ticket_items.append({
+                    'Description': transaction.get('Description', 'Unknown'),
+                    'Amount': abs(transaction['Amount']),
+                    'Category': transaction.get('Category', 'Uncategorized'),
+                    'Date': transaction.get('Date', '').strftime('%Y-%m-%d') if transaction.get('Date') else ''
+                })
         
         # Calculate monthly spending by category
         monthly_spending = {}
         for transaction in transactions:
-            month = transaction['Date'].strftime('%Y-%m')
-            category = transaction['Category']
-            if month not in monthly_spending:
-                monthly_spending[month] = {}
-            if category not in monthly_spending[month]:
-                monthly_spending[month][category] = 0
-            monthly_spending[month][category] += abs(transaction['Amount'])
+            if transaction.get('Date') and transaction.get('Category'):
+                month = transaction['Date'].strftime('%Y-%m')
+                category = transaction['Category']
+                amount = abs(transaction.get('Amount', 0))
+                
+                if month not in monthly_spending:
+                    monthly_spending[month] = {}
+                if category not in monthly_spending[month]:
+                    monthly_spending[month][category] = 0
+                monthly_spending[month][category] += amount
         
         # Generate insights using AI
         prompt = f"""Analyze these financial transactions and provide concise insights for a young adult in their twenties:
 
         High-ticket expenses (over $500):
-        {[f"- ${abs(t['Amount'])}: {t['Description']} ({t['Category']})" for t in high_ticket_items]}
+        {[f"- ${item['Amount']}: {item['Description']} ({item['Category']}) on {item['Date']}" for item in high_ticket_items]}
 
         Monthly spending by category:
         {json.dumps(monthly_spending, indent=2)}
@@ -237,6 +248,7 @@ def get_spending_insights(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Error generating insights: {str(e)}")
+        logger.error(traceback.format_exc())
         return {
             'high_ticket_items': [],
             'monthly_spending': {},
@@ -469,41 +481,43 @@ def analyze_goals():
         custom_goals = data.get('customGoals', [])
         actual_spending = data.get('actualSpending')
 
-        # Prepare analysis context
-        analysis_context = {
-            "monthly_income": monthly_income,
-            "budget_goals": budget_goals,
-            "custom_goals": custom_goals
-        }
+        if not monthly_income or not actual_spending or not actual_spending.get('categoryData'):
+            return jsonify({'error': 'Missing required data'}), 400
 
-        if actual_spending:
-            analysis_context["actual_spending"] = {
-                "categories": actual_spending["categoryData"],
-                "monthly_trend": actual_spending["monthlyData"],
-                "current_insights": actual_spending["insights"]
-            }
+        # Calculate total current spending
+        total_spending = sum(category['Amount'] for category in actual_spending['categoryData'])
+        
+        # Calculate current spending percentages
+        current_spending = {}
+        for category in actual_spending['categoryData']:
+            current_spending[category['Category'].lower()] = (category['Amount'] / total_spending) * 100
 
         # Generate AI analysis and recommendations
         prompt = f"""As a financial advisor, analyze this person's financial goals and provide personalized recommendations:
 
 Monthly Income: ${monthly_income}
 
+Current Spending by Category:
+{json.dumps([{
+    'Category': cat['Category'],
+    'Amount': cat['Amount'],
+    'Percentage': current_spending.get(cat['Category'].lower(), 0)
+} for cat in actual_spending['categoryData']], indent=2)}
+
 Desired Budget Allocation:
-{json.dumps(budget_goals, indent=2)}
+{json.dumps([{
+    'Category': cat,
+    'Percentage': percentage
+} for cat, percentage in budget_goals.items()], indent=2)}
 
 Personal Financial Goals:
 {json.dumps(custom_goals, indent=2)}
 
-{f'''
-Current Spending Patterns:
-{json.dumps(actual_spending, indent=2)}
-''' if actual_spending else 'No current spending data available.'}
-
 Provide analysis in this format:
 1. Budget Analysis
-   - Compare desired allocation with recommended percentages
-   - If actual spending data exists, compare with current habits
-   - Identify potential issues or unrealistic goals
+   - Compare current spending with desired allocation
+   - Identify areas where spending needs to be adjusted
+   - Suggest realistic adjustments based on current habits
 
 2. Custom Goals Assessment
    - Evaluate feasibility of personal financial goals
@@ -513,7 +527,7 @@ Provide analysis in this format:
 3. Action Items
    - List 3-5 specific, actionable steps
    - Include both immediate actions and long-term strategies
-   - If actual spending data exists, focus on areas needing most improvement
+   - Focus on areas needing most improvement
 
 Keep the response practical and focused on achievable improvements."""
 
@@ -535,7 +549,8 @@ Keep the response practical and focused on achievable improvements."""
                 'monthly_income': monthly_income,
                 'budget_goals': budget_goals,
                 'custom_goals': custom_goals,
-                'has_actual_data': bool(actual_spending)
+                'current_spending': current_spending,
+                'total_spending': total_spending
             }
         })
 
