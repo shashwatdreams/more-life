@@ -1,0 +1,101 @@
+Date,Description,Category,Amount,Balance
+2025-03-01,Public Transport,Transport,-73.93,3881.32
+2025-03-01,Doctor Appointment,Health,-5.5,2548.89
+2025-03-01,ATM Withdrawal,Cash,-61.92,3806.2
+2025-03-01,ATM Withdrawal,Cash,-68.6,2674.27
+2025-03-02,Restaurant,Dining,-18.45,2117.9
+2025-03-02,Public Transport,Transport,-22.7,3955.25
+2025-03-02,Clothing Store,Shopping,-59.52,3746.68
+2025-03-02,Restaurant,Dining,-21.1,2001.56
+2025-03-02,Pharmacy,Health,-62.56,3174.22
+2025-03-02,Gas Station,Transport,-62.77,3253.04
+2025-03-03,Doctor Appointment,Health,-31.38,1932.95
+2025-03-03,Grocery Store,Groceries,-72.95,912.05
+2025-03-03,Gas Station,Transport,-36.76,227.03
+2025-03-03,Cinema,Entertainment,-59.54,3322.86
+2025-03-03,Online Subscription,Entertainment,-32.68,3533.3
+2025-03-03,Coffee Shop,Dining,-72.33,3432.05
+2025-03-04,ATM Withdrawal,Cash,-46.15,1351.66
+2025-03-05,Electricity Bill,Utilities,-66.55,3107.67
+2025-03-05,Coffee Shop,Dining,-21.31,511.73
+2025-03-05,ATM Withdrawal,Cash,-74.87,2909.69
+2025-03-06,Doctor Appointment,Health,-37.86,1098.14
+2025-03-06,Cinema,Entertainment,-61.11,3624.95
+2025-03-06,Bookstore,Shopping,-72.86,2204.34
+2025-03-06,Public Transport,Transport,-73.61,755.65
+2025-03-06,ATM Withdrawal,Cash,-71.22,1136.0
+2025-03-07,Restaurant,Dining,-29.13,180.05
+2025-03-07,Supermarket,Groceries,-22.18,2458.54
+2025-03-07,Water Bill,Utilities,-29.94,3077.73
+2025-03-07,Public Transport,Transport,-13.2,3868.12
+2025-03-07,Supermarket,Groceries,-26.83,1324.83
+2025-03-08,Doctor Appointment,Health,-31.05,4006.52
+2025-03-08,Clothing Store,Shopping,-59.69,1540.86
+2025-03-08,Online Subscription,Entertainment,-11.12,554.87
+2025-03-09,Online Subscription,Entertainment,-30.88,1067.26
+2025-03-09,ATM Withdrawal,Cash,-56.36,3021.37
+2025-03-09,Cinema,Entertainment,-9.15,502.58
+2025-03-09,Supermarket,Groceries,-63.73,848.32
+2025-03-10,Internet Bill,Utilities,-70.78,1397.81
+2025-03-11,Water Bill,Utilities,-18.14,3565.98
+2025-03-11,Public Transport,Transport,-12.77,351.79
+2025-03-12,Pharmacy,Health,-19.06,829.26
+2025-03-13,Clothing Store,Shopping,-17.85,209.18
+2025-03-13,Doctor Appointment,Health,-48.31,1744.2
+2025-03-13,Electricity Bill,Utilities,-64.77,2562.29
+2025-03-13,Internet Bill,Utilities,-36.5,263.79
+2025-03-14,Coffee Shop,Dining,-23.68,626.43
+2025-03-14,Fast Food,Dining,-72.27,1468.59
+2025-03-15,Grocery Store,Groceries,1293.55,1400.0
+2025-03-15,Public Transport,Transport,-25.57,650.11
+2025-03-15,Bookstore,Shopping,-53.4,2405.14
+2025-03-16,Grocery Store,Groceries,-15.98,3686.06
+2025-03-17,Fast Food,Dining,-9.21,2108.69
+2025-03-17,ATM Withdrawal,Cash,-62.43,693.22
+2025-03-17,Mobile Bill,Utilities,-7.05,3315.81
+2025-03-17,Supermarket,Groceries,-21.83,533.04
+2025-03-18,Online Shopping,Shopping,-47.16,2779.79
+2025-03-18,Internet Bill,Utilities,-48.76,2051.69
+2025-03-18,Gas Station,Transport,-21.25,1046.01
+2025-03-18,Fast Food,Dining,-39.59,2509.3
+2025-03-18,Grocery Store,Groceries,-34.51,1600.55
+2025-03-19,Supermarket,Groceries,-69.98,1207.22
+2025-03-19,Coffee Shop,Dining,-60.44,565.99
+2025-03-19,ATM Withdrawal,Cash,-37.23,1964.33
+2025-03-20,Grocery Store,Groceries,-74.59,364.56
+2025-03-20,Coffee Shop,Dining,-8.24,2100.45
+2025-03-20,Mobile Bill,Utilities,-47.21,2627.06
+2025-03-20,Fast Food,Dining,-18.01,2491.29
+2025-03-20,Cinema,Entertainment,-54.47,2350.67
+2025-03-20,Grocery Store,Groceries,-73.6,106.45
+2025-03-21,Supermarket,Groceries,-10.56,3010.81
+2025-03-21,Grocery Store,Groceries,-28.91,1863.05
+2025-03-22,ATM Withdrawal,Cash,-36.92,2742.87
+2025-03-22,Clothing Store,Shopping,-17.94,2022.66
+2025-03-23,Gas Station,Transport,-39.26,2826.95
+2025-03-23,ATM Withdrawal,Cash,-65.36,1678.84
+2025-03-23,Public Transport,Transport,-40.99,1891.96
+2025-03-24,Supermarket,Groceries,-15.76,486.82
+2025-03-25,Electricity Bill,Utilities,-73.47,2277.2
+2025-03-25,Mobile Bill,Utilities,-17.54,675.68
+2025-03-26,ATM Withdrawal,Cash,-47.63,1277.2
+2025-03-26,Online Shopping,Shopping,-67.99,2136.35
+2025-03-26,ATM Withdrawal,Cash,-43.48,2866.21
+2025-03-26,Grocery Store,Groceries,-51.5,300.29
+2025-03-26,Concert Tickets,Entertainment,-49.65,3382.4
+2025-03-26,ATM Withdrawal,Cash,-7.9,2554.39
+2025-03-26,ATM Withdrawal,Cash,-28.92,3504.38
+2025-03-27,Fast Food,Dining,-8.24,3702.04
+2025-03-27,ATM Withdrawal,Cash,-11.09,2040.6
+2025-03-28,Cinema,Entertainment,-43.78,1635.06
+2025-03-28,Internet Bill,Utilities,-16.26,3236.78
+2025-03-28,Restaurant,Dining,-47.67,439.15
+2025-03-28,Fast Food,Dining,-36.4,3710.28
+2025-03-29,Mobile Bill,Utilities,-61.01,985.0
+2025-03-29,ATM Withdrawal,Cash,-40.83,3584.12
+2025-03-30,Restaurant,Dining,-28.57,3977.95
+2025-03-30,Apple Store,Shopping,-962.43,4037.57
+2025-03-30,Gas Station,Transport,-5.34,1857.71
+2025-03-30,ATM Withdrawal,Cash,-26.25,2984.56
+2025-03-31,Pharmacy,Health,-10.57,2480.72
+2025-03-31,Electricity Bill,Utilities,-65.2,1792.51
